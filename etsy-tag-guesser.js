@@ -2,7 +2,6 @@ var listings = new Meteor.Collection("listings");
 var imagesByListing = new Meteor.Collection("images-by-listing");
 var listingIdsByTag = new Meteor.Collection("listing-ids-by-tag");
 var bookmarksByTag = new Meteor.Collection("bookmarks-by-tag");
-var imagesForChallenge = new Meteor.Collection("images-for-challenge");
 var games = new Meteor.Collection("games");
 
 function escapeRegExp(string){
@@ -45,34 +44,18 @@ if (Meteor.isClient) {
 		console.log("my game is:", games.findOne(Session.get("gameId")));
 	});
 	Deps.autorun(function () {
+		Meteor.subscribe('open-games', Session.get('userId'));
 		Meteor.subscribe('my-games', Session.get('userId'));
 	});
-	Meteor.subscribe('open-games', Session.get('userId'));
 	Template.hello.tagUserId = function () {
-		var curChallenge = Session.get("curChallenge");
-		if (!curChallenge) {
-			return false;
-		}
-		var curGame = games.findOne({_id: Session.get("curChallenge").game});
+		var curGame = games.findOne(Session.get("gameId"));
 		if (!curGame) {
-			console.log("there is no record of the current game (id " + Session.get("curChallenge").game + ")");
 			return;
 		}
-		return _.filter(
-			curGame.players,
-			function (playerId) {
-				return playerId !== Session.get("userId");
-			}
-		)[0];
+		return _.filter(curGame.players, function (playerId) { return playerId !== Session.get("userId"); }).pop();
 	};
 	Template.hello.userId = function () {
 		return Session.get("userId");
-	};
-	Template.hello.myRound = function () {
-		return Session.get("myRound");
-	};
-	Template.hello.opponentRound = function () {
-		return Session.get("opponentRound");
 	};
 	Template.hello.tag = function () {
 		return Session.get("tag");
@@ -88,16 +71,6 @@ if (Meteor.isClient) {
 	// 	}
 	// 	return Meteor.call("getListings", latestTag.tag, 5);
 	// };
-	var opponentId = function (playerId, playersObject) {
-		var opponentId;
-		_.each(playersObject, function (v,k) {
-			if (k !== playerId) {
-				opponentId = k;
-				return false;
-			}
-		});
-		return opponentId;
-	};
 	Template.hello.noOpenGames = function () {
 	};
 	Template.hello.gameId = function () {
@@ -117,40 +90,32 @@ if (Meteor.isClient) {
 		return Session.get("gameId");
 	};
 	Template.hello.myOpenGames = function () {
-		return games.find({open: true, players: Session.get("userId")});
+		return games.find({open: true, "players.userId": Session.get("userId")});
 	};
 	Template.hello.openGames = function () {
-		return games.find({open: true, players: {$nin: [Session.get("userId")]}}, {sort: {created: -1}, limit: 10});
+		return games.find({open: true, "players.userId": {$ne: Session.get("userId")}}, {sort: {created: -1}, limit: 10});
 	};
 	Template.hello.myListings = function () {
-		boardDep.depend();
-		var board = imagesForChallenge.findOne({_id: Session.get("boardId")});
+		boardDep.depend(); // necessary?
+		var board = games.findOne(Session.get("gameId"));
 		if (!board) {
 			return;
 		}
-		// TODO: determine opponent's id
-		var images;
-		_.each(board.players, function (player) {
-			if (player.userId === Session.get("userId")) {
-				images = player.images;
-			}
-		});
-		return images;
+		return _.map(_.filter(board.players,
+			function (player) {return player.userId === Session.get("userId");}),
+			function (player) {return player.images;})
+			.pop()
 	};
 	Template.hello.opponentImages = function () {
-		boardDep.depend();
-		var board = imagesForChallenge.findOne({_id: Session.get("boardId")});
+		boardDep.depend(); // necessary?
+		var board = games.findOne(Session.get("gameId"));
 		if (!board) {
 			return;
 		}
-		// TODO: determine opponent's id
-		var images;
-		_.each(board.players, function (player) {
-			if (player.userId !== Session.get("userId")) {
-				images = player.images;
-			}
-		});
-		return images;
+		return _.map(_.filter(board.players,
+			function (player) {return player.userId !== Session.get("userId");}),
+			function (player) {return player.images;})
+			.pop()
 	};
 	Template.hello.events({
 		'click .leave-game' : function () {
@@ -183,15 +148,15 @@ if (Meteor.isClient) {
 			Meteor.call("setPlayerTagAndLoadImagesInBoard", {
 				userId: Session.get("userId"),
 				tag: e.target.value,
-				boardId: Session.get("boardId"),
+				gameId: Session.get("gameId"),
 				numImages: 3
-			}, function (err, boardId) {
+			}, function (err, gameId) {
 				if (err) {
 					console.error(err);
 					debugger;
 				}
 				boardDep.changed();
-				Session.set("boardId", boardId);
+				Session.set("gameId", gameId);
 			});
 		}
 	});
@@ -229,12 +194,12 @@ if (Meteor.isServer) {
 		return offset;
 	};
 	Meteor.publish('open-games', function (userId) {
-		console.log("all games:", games.find({open:true, $not: {players: userId}}).fetch());
+		console.log("all games:", games.find({open:true, "players.userId": {$ne: userId}}).fetch());
 		var twoMinutesAgo = new Date(new Date().getTime() - 2 * 60000);
-		return games.find({open:true, created: {$gt: twoMinutesAgo}, players: {$nin: [userId]}}, {orderby: {created: 1}});
+		return games.find({open:true, created: {$gt: twoMinutesAgo}, "players.userId": {$ne: userId}}, {orderby: {created: 1}});
 	});
 	Meteor.publish('my-games', function (userId) {
-		return games.find({players: userId});
+		return games.find({"players.userId": userId});
 	});
 	Meteor.methods({
 		identify: function () {
@@ -248,7 +213,7 @@ if (Meteor.isServer) {
 			console.log("removing with these args: ", args);
 			games.update(args.gameId, {
 				$set: {open: true},
-				$pull: {players: args.userId}
+				$pull: {players: {userId: args.userId}}
 			});
 			if (0 === games.findOne(args.gameId).players.length) {
 				games.remove(args.gameId);
@@ -260,6 +225,7 @@ if (Meteor.isServer) {
 				gameId: undefined
 			}, _args);
 			var openGameId;
+			var openGame;
 			if (args.gameId) {
 				var openGame = games.findOne({_id: args.gameId, open: true});
 				if (!openGame) {
@@ -280,7 +246,7 @@ if (Meteor.isServer) {
 					created: new Date(),
 					open: true,
 					players: []
-				}
+				};
 				openGameId = games.insert(openGame);
 				console.log("made a new game with id", openGameId);
 			}
@@ -288,20 +254,27 @@ if (Meteor.isServer) {
 				if (openGame.players.length > 0) {
 					games.update(openGameId, {$set: {open:false}});
 				}
-				console.log("open game before adding you = ", games.findOne({_id:openGameId}));
+				console.log("open game before adding you = ", games.findOne(openGameId));
 				console.log("putting ", args.userId, " in game ", openGameId);
-				games.update(openGameId, {$push: {players: args.userId}});
+				games.update(openGameId, {
+					$push: {
+						players: {
+							userId: args.userId,
+							images: []
+						}
+					}
+				});
 			} else {
 				console.log("you are already in game", openGame._id);
 			}
-			console.log("open game after adding you = ", games.findOne({_id:openGameId}));
+			console.log("open game after adding you = ", games.findOne(openGameId));
 			return openGameId;
 		},
 		setPlayerTagAndLoadImagesInBoard: function (_args) {
 			var args = _.extend({
 				userId: undefined,
 				tag: undefined,
-				boardId: undefined,
+				gameId: undefined,
 				numImages: 3
 			}, _args);
 			var listings = Meteor.call("getListings", {
@@ -348,24 +321,20 @@ if (Meteor.isServer) {
 				console.log("imageForThisListing", listingId, imageForThisListing);
 				return imageForThisListing;
 			});
-			var boardId = args.boardId;
-			if (!boardId) {
-				boardId = imagesForChallenge.insert({
+			var gameId = args.gameId;
+			if (!gameId) {
+				gameId = games.insert({
 					players: [ ],
 					round: 0
 				});
-				console.log("created board with id: " + boardId);
+				console.log("created board with id: " + gameId);
 			}
-			var board = imagesForChallenge.findOne({_id: boardId});
+			var board = games.findOne(gameId);
 			if (!board) {
-				console.error("no board matching id " + boardId);
+				console.error("no board matching id " + gameId);
+				return;
 			}
-			var me = undefined;
-			_.each(board.players, function (player) {
-				if (player.userId === args.userId) {
-					me = player;
-				}
-			});
+			var me = _.filter(board.players, function (player) { return player.userId === args.userId; }).pop();
 			if (!me) {
 				me = {userId: args.userId};
 				console.log("args.userId: " + args.userId);
@@ -374,7 +343,7 @@ if (Meteor.isServer) {
 			}
 			me.images = images;
 			me.tag = args.tag;
-			imagesForChallenge.update({_id: board._id}, board);
+			games.update({_id: board._id}, board);
 			return board._id;
 		},
 		getListings: function (_args) { // maybe this does not need to be a meteor method
