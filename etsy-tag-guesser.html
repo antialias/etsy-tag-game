@@ -10,7 +10,18 @@
   <div>tag: <input type="text" id="tag-input"></div>
   <div>you are: {{userId}}</div>
   <div>tag chosen by: {{tagUserId}}</div>
-  <div>Game ID: {{gameId}}</div>
+  <div>
+    {{#unless gameId}}
+      {{#if not myOpenGames}}
+      <button class='create-and-join-game'>Advertise yourself</button>
+      {{/if}}
+    {{/unless}}
+    {{#if gameId}}
+      Game ID: {{gameId}}
+      {{#if not curGame}}(waiting for opponent){{/if}}
+      <button class='leave-game'>leave</button>
+    {{/if}}
+  </div>
   <div>Round (me): {{myRound}}</div>
   <div>Round (opponent): {{opponentRound}}</div>
   <div>
@@ -30,4 +41,17 @@
       </div>
     {{/each}}
   </div>
+  {{#if not curGame}}
+  {{#if openGames}}
+  Games you can join:
+  <ul>
+    {{#each openGames}}
+    <li>{{_id}} (created {{created}}) ({{players.length}} players)<button class='join-game'>join</button></li>
+    {{/each}}
+  </ul>
+  {{/if}}
+  {{/if}}
+  {{#if not openGames}}
+  no open games
+  {{/if}}
 </template>

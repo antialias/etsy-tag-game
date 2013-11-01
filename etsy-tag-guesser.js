@@ -8,6 +8,7 @@ var games = new Meteor.Collection("games");
 function escapeRegExp(string){
 	return string.replace(/([.*+?^=!:${}()|\[\]\/\\])/g, "\\$1");
 }
+// TODO: configure Etsy wrapper to use jsonp
 var Etsy = function (_props) {
 	this.props = _.extend({
 		api_key: undefined,
@@ -26,31 +27,27 @@ var etsy = new Etsy({
 	api_key: "pufm9q47614yg1l5iyiv1z90"
 });
 if (Meteor.isClient) {
+	Handlebars.registerHelper("not", function (data) {
+		// {{#unless seems to consider [] as true, so we do this instead}}
+		return data.fetch().length === 0;
+	});
 	Meteor.call('identify', function (err, userId) {
 		Session.set("userId", userId);
 	});
+	Deps.autorun(function() {
+		if (!Session.get("userId")) {
+			return;
+		}
+	});
 	var boardDep = new Deps.Dependency;
-	// TODO: configure Etsy wrapper to use jsonp
-	var getOpenGame = function () {
-		var userId = Session.get("userId");
-		var curGame = games.findOne({open:true});
-		if (curGame) {
-			return curGame;
-		}
-		curGame = {
-			_id: new Date().getTime().toString(),
-			open:true,
-			players: {}
-		}
-		games.insert(curGame);
-		return curGame;
-	};
-	Template.hello.gameId = function () {
-		if (!Session.get("curChallenge")) {
-			return false;
-		}
-		return Session.get("curChallenge").game;
-	};
+	Deps.autorun(function () {
+		console.log("my game id is:", Session.get("gameId"));
+		console.log("my game is:", games.findOne(Session.get("gameId")));
+	});
+	Deps.autorun(function () {
+		Meteor.subscribe('my-games', Session.get('userId'));
+	});
+	Meteor.subscribe('open-games', Session.get('userId'));
 	Template.hello.tagUserId = function () {
 		var curChallenge = Session.get("curChallenge");
 		if (!curChallenge) {
@@ -101,6 +98,30 @@ if (Meteor.isClient) {
 		});
 		return opponentId;
 	};
+	Template.hello.noOpenGames = function () {
+	};
+	Template.hello.gameId = function () {
+		if (!Session.get("curChallenge")) {
+			return false;
+		}
+		return Session.get("curChallenge").game;
+	};
+	Deps.autorun(function () {
+		Session.set("game-ready", games.findOne({_id: Session.get("gameId"), open: false}));
+	});
+	Template.hello.curGame = function () {
+		console.log("curgame is", games.find({_id: Session.get("gameId"), open: false}).fetch());
+		return games.find({_id: Session.get("gameId"), open: false});
+	};
+	Template.hello.gameId = function () {
+		return Session.get("gameId");
+	};
+	Template.hello.myOpenGames = function () {
+		return games.find({open: true, players: Session.get("userId")});
+	};
+	Template.hello.openGames = function () {
+		return games.find({open: true, players: {$nin: [Session.get("userId")]}}, {sort: {created: -1}, limit: 10});
+	};
 	Template.hello.myListings = function () {
 		boardDep.depend();
 		var board = imagesForChallenge.findOne({_id: Session.get("boardId")});
@@ -132,6 +153,29 @@ if (Meteor.isClient) {
 		return images;
 	};
 	Template.hello.events({
+		'click .leave-game' : function () {
+			Meteor.call(
+				"leaveAGame",
+				{
+					gameId: Session.get("gameId"),
+					userId: Session.get("userId")
+				},
+				function (err, something) {
+					Session.set("gameId", undefined)
+				}
+			);
+		},
+		'click .create-and-join-game' : function () {
+			Meteor.call("joinAGame", {userId: Session.get("userId")}, function (err, gameId) {
+				Session.set("gameId", gameId);
+			});
+		},
+		'click .join-game' : function (e, target) {
+			var game = this;
+			Meteor.call("joinAGame", {gameId: game._id, userId: Session.get("userId")}, function (err, gameId) {
+				Session.set("gameId", gameId);
+			});
+		},
 		'keyup #tag-input' : function (e, target) {
 			if (13 !== e.keyCode) {
 				return;
@@ -184,9 +228,74 @@ if (Meteor.isServer) {
 		);
 		return offset;
 	};
+	Meteor.publish('open-games', function (userId) {
+		console.log("all games:", games.find({open:true, $not: {players: userId}}).fetch());
+		var twoMinutesAgo = new Date(new Date().getTime() - 2 * 60000);
+		return games.find({open:true, created: {$gt: twoMinutesAgo}, players: {$nin: [userId]}}, {orderby: {created: 1}});
+	});
+	Meteor.publish('my-games', function (userId) {
+		return games.find({players: userId});
+	});
 	Meteor.methods({
 		identify: function () {
 			return Math.random().toString();
+		},
+		leaveAGame: function (_args) {
+			var args = _.extend({
+				userId: undefined,
+				gameId: undefined
+			}, _args);
+			console.log("removing with these args: ", args);
+			games.update(args.gameId, {
+				$set: {open: true},
+				$pull: {players: args.userId}
+			});
+			if (0 === games.findOne(args.gameId).players.length) {
+				games.remove(args.gameId);
+			}
+		},
+		joinAGame: function (_args) {
+			var args = _.extend({
+				userId: undefined,
+				gameId: undefined
+			}, _args);
+			var openGameId;
+			if (args.gameId) {
+				var openGame = games.findOne({_id: args.gameId, open: true});
+				if (!openGame) {
+					return false;
+				}
+			} else {
+				var alreadyAdvertising = games.findOne({open:true, players: args.userId});
+				if (alreadyAdvertising) {
+					console.log(args.userId, "is are already advertising a game:", alreadyAdvertising);
+					return false;
+				}
+			}
+			if (openGame) {
+				console.log("found an open game:", openGame);
+				openGameId = openGame._id;
+			} else {
+				openGame = {
+					created: new Date(),
+					open: true,
+					players: []
+				}
+				openGameId = games.insert(openGame);
+				console.log("made a new game with id", openGameId);
+			}
+			if (-1 === _.indexOf(openGame.players, args.userId)) {
+				if (openGame.players.length > 0) {
+					games.update(openGameId, {$set: {open:false}});
+				}
+				console.log("open game before adding you = ", games.findOne({_id:openGameId}));
+				console.log("putting ", args.userId, " in game ", openGameId);
+				games.update(openGameId, {$push: {players: args.userId}});
+			} else {
+				console.log("you are already in game", openGame._id);
+			}
+			console.log("open game after adding you = ", games.findOne({_id:openGameId}));
+			return openGameId;
 		},
 		setPlayerTagAndLoadImagesInBoard: function (_args) {
 			var args = _.extend({
