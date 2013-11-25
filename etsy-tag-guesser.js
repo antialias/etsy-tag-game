@@ -97,7 +97,7 @@ if (Meteor.isClient) {
 	Template.hello.openGames = function () {
 		return games.find({open: true, "players.userId": {$ne: Session.get("userId")}}, {sort: {created: -1}, limit: 10});
 	};
-	Template.hello.myListings = function () {
+	Template.hello.myTiles = function () {
 		boardDep.depend(); // necessary?
 		var board = games.findOne(Session.get("gameId"));
 		if (!board) {
@@ -119,13 +119,13 @@ if (Meteor.isClient) {
 			console.log("no player for current game that isn't ourselves");
 			return;
 		}
-		console.log("setting opponentImages: ", player.images);
-		Session.set('opponentImages', player.images);
+		console.log("setting opponentTiles: ", player.tiles);
+		Session.set('opponentTiles', player.tiles);
 		console.log("setting opponentUserId: ", player.userId);
 		Session.set('opponentUserId', player.userId);
 	});
-	Template.hello.opponentImages = function () {
-		return Session.get('opponentImages');
+	Template.hello.opponentTiles = function () {
+		return Session.get('opponentTiles');
 	};
 	Template.hello.events({
 		'click .leave-game' : function () {
@@ -403,8 +403,11 @@ if (Meteor.isServer) {
 				// console.log("the board is", board);
 				board.players.push(me);
 			}
-			me.images = _.map(listingIds, function (listingId) {
-				return imagesByListing.findOne({listing_id: listingId});
+			me.tiles = _.map(listingIds, function (listingId) {
+				return {
+					listing: listingsById[listingId],
+					image: imagesByListing.findOne({listing_id: listingId})
+				};
 			});
 			me.tag = args.tag;
 			games.update({_id: board._id}, board);
