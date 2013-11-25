@@ -26,6 +26,12 @@ var etsy = new Etsy({
 	api_key: "pufm9q47614yg1l5iyiv1z90"
 });
 if (Meteor.isClient) {
+	var is_touch_device = 'ontouchstart' in document.documentElement;
+	jQuery(function ($) {
+		if (is_touch_device) {
+			$("html").addClass("touch");
+		}
+	});
 	Handlebars.registerHelper("empty", function (data) {
 		// {{#unless seems to consider [] as true, so we do this instead}}
 		return data.fetch().length === 0;
