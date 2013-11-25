@@ -266,6 +266,7 @@ if (Meteor.isServer) {
 					$push: {
 						players: {
 							userId: args.userId,
+							guesses: [],
 							images: []
 						}
 					}
