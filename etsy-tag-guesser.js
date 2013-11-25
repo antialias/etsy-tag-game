@@ -326,11 +326,6 @@ if (Meteor.isServer) {
 				return future;
 			});
 			Future.wait(futures);
-			var images = _.map(listingIds, function (listingId) {
-				var imageForThisListing = imagesByListing.findOne({listing_id: listingId});
-				console.log("imageForThisListing", listingId, imageForThisListing);
-				return imageForThisListing;
-			});
 			var gameId = args.gameId;
 			if (!gameId) {
 				gameId = games.insert({
@@ -351,7 +346,9 @@ if (Meteor.isServer) {
 				// console.log("the board is", board);
 				board.players.push(me);
 			}
-			me.images = images;
+			me.images = _.map(listingIds, function (listingId) {
+				return imagesByListing.findOne({listing_id: listingId});
+			});
 			me.tag = args.tag;
 			games.update({_id: board._id}, board);
 			return board._id;
