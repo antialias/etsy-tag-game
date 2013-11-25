@@ -155,7 +155,7 @@ if (Meteor.isClient) {
 				userId: Session.get("userId"),
 				tag: e.target.value,
 				gameId: Session.get("gameId"),
-				numImages: 3
+				numImages: 9
 			}, function (err, gameId) {
 				if (err) {
 					console.error(err);
