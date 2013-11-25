@@ -212,6 +212,36 @@ if (Meteor.isServer) {
 		return games.find({"players.userId": userId});
 	});
 	Meteor.methods({
+		submitGuess: function (_args) {
+			var args = _.extend({
+				challengingUserId: undefined,
+				guessingUserId: undefined,
+				tagGuess: undefined,
+				gameId: undefined
+			}, _args);
+			games.update(
+				{_id: args.gameId, "players.userId": args.userId},
+				{$push: {"players.$.guesses": args.tagGuess}}
+			);
+			var game = games.findOne(args.gameId);
+			if (!game) {
+				console.log("no game found for game id:", args.gameId);
+				return;
+			}
+			var challengingUser = _.filter(game.players, function (player) {
+				return player.userId === args.challengingUserId;
+			}).pop();
+			if (!challengingUser) {
+				console.log("no players in game have id", args.challengingUserId);
+				return false;
+			}
+			console.log("found challenging user for this guess:", challengingUser);
+			if (false === args.tagGuess) {
+				// user gives up
+				return challengingUser.tag
+			}
+			return challengingUser.tag === args.tagGuess;
+		},
 		identify: function () {
 			return Math.random().toString();
 		},
