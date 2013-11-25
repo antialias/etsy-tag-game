@@ -391,6 +391,7 @@ if (Meteor.isServer) {
 			console.log("we got this many back from the server: ", listingInfo.results.length);
 			console.log("this many listings matched our query:", listingInfo.count);
 			_.each(listingInfo.results, function (listing) {
+				listing.titleUnescaped = $("<div>").html(listing.title).text();
 				listings.insert(listing);
 			});
 			return listingInfo.results;
