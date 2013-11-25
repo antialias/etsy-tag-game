@@ -45,17 +45,18 @@
       </div>
     {{/each}}
   </div>
-  {{#if empty curGame}}
-  {{#if openGames}}
-  Games you can join:
-  <ul>
-    {{#each openGames}}
-    <li>{{_id}} (created {{created}}) ({{players.length}} players)<button class='join-game'>join</button></li>
-    {{/each}}
-  </ul>
   {{/if}}
-  {{/if}}
-  {{#if empty openGames}}
-  no open games
-  {{/if}}
+  {{#unless gameId}}
+    {{#if openGames}}
+    Games you can join:
+    <ul>
+      {{#each openGames}}
+      <li>{{_id}} (created {{created}}) ({{players.length}} players)<button class='join-game'>join</button></li>
+      {{/each}}
+    </ul>
+    {{/if}}
+    {{#if empty openGames}}
+      no open games
+    {{/if}}
+  {{/unless}}
 </template>
