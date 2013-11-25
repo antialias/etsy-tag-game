@@ -26,7 +26,7 @@ var etsy = new Etsy({
 	api_key: "pufm9q47614yg1l5iyiv1z90"
 });
 if (Meteor.isClient) {
-	Handlebars.registerHelper("not", function (data) {
+	Handlebars.registerHelper("empty", function (data) {
 		// {{#unless seems to consider [] as true, so we do this instead}}
 		return data.fetch().length === 0;
 	});

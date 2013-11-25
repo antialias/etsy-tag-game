@@ -12,13 +12,13 @@
   <div>tag chosen by: {{tagUserId}}</div>
   <div>
     {{#unless gameId}}
-      {{#if not myOpenGames}}
+      {{#if empty myOpenGames}}
       <button class='create-and-join-game'>Advertise yourself</button>
       {{/if}}
     {{/unless}}
     {{#if gameId}}
       Game ID: {{gameId}}
-      {{#if not curGame}}(waiting for opponent){{/if}}
+      {{#if empty curGame}}(waiting for opponent){{/if}}
       <button class='leave-game'>leave</button>
     {{/if}}
   </div>
@@ -39,7 +39,7 @@
       </div>
     {{/each}}
   </div>
-  {{#if not curGame}}
+  {{#if empty curGame}}
   {{#if openGames}}
   Games you can join:
   <ul>
@@ -49,7 +49,7 @@
   </ul>
   {{/if}}
   {{/if}}
-  {{#if not openGames}}
+  {{#if empty openGames}}
   no open games
   {{/if}}
 </template>
