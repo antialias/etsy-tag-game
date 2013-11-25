@@ -110,7 +110,7 @@ if (Meteor.isClient) {
 		return _.map(_.filter(board.players,
 			function (player) {return player.userId === Session.get("userId");}),
 			function (player) {return player.images;})
-			.pop()
+			.pop();
 	};
 	Template.hello.opponentImages = function () {
 		boardDep.depend(); // necessary?
