@@ -151,6 +151,29 @@ if (Meteor.isClient) {
 				Session.set("gameId", gameId);
 			});
 		},
+		'click .give-up' : function (e, target) {
+			Meteor.call("submitGuess", {
+				challengingUserId: Session.get('opponentUserId'),
+				guessingUserId: Session.get("userId"),
+				gameId: Session.get("gameId"),
+				tagGuess: false
+			}, function (err, correctTag) {
+				console.log("challenging tag was:", correctTag);
+			});
+		},
+		'keyup .your-guess' : function (e) {
+			if (13 !== e.keyCode) {
+				return;
+			}
+			Meteor.call("submitGuess", {
+				challengingUserId: Session.get('opponentUserId'),
+				guessingUserId: Session.get("userId"),
+				gameId: Session.get("gameId"),
+				tagGuess: e.target.value
+			}, function (err, correctGuess) {
+				console.log("correctness of your guess:", correctGuess);
+			});
+		},
 		'keyup #tag-input' : function (e, target) {
 			if (13 !== e.keyCode) {
 				return;
