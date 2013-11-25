@@ -288,8 +288,11 @@ if (Meteor.isServer) {
 				tag: args.tag,
 				numListings: args.numImages
 			});
-			var listingIds = _.map(listings, function (listing) {
-				return listing.listing_id;
+			var listingIds = [];
+			var listingsById = {};
+			_.each(listings, function (listing) {
+				listingIds.push(listing.listing_id);
+				listingsById[listing.listing_id] = listing;
 			});
 			var futures = _.map(listingIds, function (listingId) {
 				// listingIdsByTag.insert({tag:tag, listing_id: listing.listing_id, date: new Date(), userId: this.userId});
