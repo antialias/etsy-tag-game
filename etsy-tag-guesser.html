@@ -22,20 +22,26 @@
       <button class='leave-game'>leave</button>
     {{/if}}
   </div>
+  {{#if gameId}}
   <div>
     <div class='tag'>{{tag}}</div>
-    <h2>images for my tag</h2>
+    <h2>Images for your tag that have been sent to your opponent:</h2>
+    <div class='block-of-images'>
     {{#each myListings}}
+      <div class='listing'>
+      <img class='listing-image' src="{{url_170x135}}">
+        <div class='description'>{{{description}}}</div>
+      </div>
+    {{/each}}
+      </div>
+    <h2>Challenge images from your opponent's tag?</h2>
+    <div class='block-of-images'>
+    {{#each opponentImages}}
       <div class='listing'>
         <img class='listing-image' src="{{url_170x135}}">
         <div class='description'>{{description}}</div>
       </div>
     {{/each}}
-    <h2>images for my opponent</h2>
-    {{#each opponentImages}}
-      <div class='listing'>
-        <img class='listing-image' src="{{url_170x135}}">
-        <div class='description'>{{description}}</div>
       </div>
     {{/each}}
   </div>
