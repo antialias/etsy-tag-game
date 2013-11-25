@@ -53,12 +53,8 @@ if (Meteor.isClient) {
 		Meteor.subscribe('open-games', Session.get('userId'));
 		Meteor.subscribe('my-games', Session.get('userId'));
 	});
-	Template.hello.tagUserId = function () {
-		var curGame = games.findOne(Session.get("gameId"));
-		if (!curGame) {
-			return;
-		}
-		return _.filter(curGame.players, function (playerId) { return playerId !== Session.get("userId"); }).pop();
+	Template.hello.opponentUserId = function () {
+		return Session.get('opponentUserId');
 	};
 	Template.hello.userId = function () {
 		return Session.get("userId");
@@ -112,16 +108,24 @@ if (Meteor.isClient) {
 			function (player) {return player.images;})
 			.pop();
 	};
-	Template.hello.opponentImages = function () {
+	Deps.autorun(function () {
 		boardDep.depend(); // necessary?
 		var board = games.findOne(Session.get("gameId"));
 		if (!board) {
 			return;
 		}
-		return _.map(_.filter(board.players,
-			function (player) {return player.userId !== Session.get("userId");}),
-			function (player) {return player.images;})
-			.pop()
+		var player = _.filter(board.players, function (player) {return player.userId !== Session.get("userId");}).pop();
+		if (!player) {
+			console.log("no player for current game that isn't ourselves");
+			return;
+		}
+		console.log("setting opponentImages: ", player.images);
+		Session.set('opponentImages', player.images);
+		console.log("setting opponentUserId: ", player.userId);
+		Session.set('opponentUserId', player.userId);
+	});
+	Template.hello.opponentImages = function () {
+		return Session.get('opponentImages');
 	};
 	Template.hello.events({
 		'click .leave-game' : function () {
