@@ -130,6 +130,9 @@ if (Meteor.isClient) {
 				'-webkit-perspective-origin-y': e.pageY
 			});
 		},
+		'click .block-of-images .tile' : function (e) {
+			$(e.curTarget).toggleClass('hover');
+		},
 		'click .leave-game' : function () {
 			Meteor.call(
 				"leaveAGame",
