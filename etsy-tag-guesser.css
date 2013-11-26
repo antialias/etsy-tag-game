@@ -10,6 +10,7 @@
 .block-of-images .tile .tile-image {
 	margin: 0px;
 	padding: 0px;
+	z-index:1;
 }
 .block-of-images .tile .description {
 	position: absolute;
@@ -21,10 +22,8 @@
 	display: block;
 	font-family: Arial Black, sans-serif;
 	font-weight: bold;
-	z-index: -1;
 	text-align: center;
-	overflow: hidden;
-	
+	overflow-y: scroll;
 }
 .block-of-images .tile.hover .tile-image,
 .block-of-images .tile:hover .tile-image {
