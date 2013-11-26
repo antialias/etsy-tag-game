@@ -124,6 +124,12 @@ if (Meteor.isClient) {
 		return Session.get('opponentTiles');
 	};
 	Template.hello.events({
+		'mousemove' : function (e) {
+			$(".body-container").css({
+				'-webkit-perspective-origin-x': e.pageX,
+				'-webkit-perspective-origin-y': e.pageY
+			});
+		},
 		'click .leave-game' : function () {
 			Meteor.call(
 				"leaveAGame",
