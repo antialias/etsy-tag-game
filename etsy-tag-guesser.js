@@ -98,15 +98,7 @@ if (Meteor.isClient) {
 		return games.find({open: true, "players.userId": {$ne: Session.get("userId")}}, {sort: {created: -1}, limit: 10});
 	};
 	Template.hello.myTiles = function () {
-		boardDep.depend(); // necessary?
-		var board = games.findOne(Session.get("gameId"));
-		if (!board) {
-			return;
-		}
-		return _.map(_.filter(board.players,
-			function (player) {return player.userId === Session.get("userId");}),
-			function (player) {return player.images;})
-			.pop();
+		return Session.get('myTiles');
 	};
 	Deps.autorun(function () {
 		boardDep.depend(); // necessary?
@@ -114,15 +106,19 @@ if (Meteor.isClient) {
 		if (!board) {
 			return;
 		}
-		var player = _.filter(board.players, function (player) {return player.userId !== Session.get("userId");}).pop();
-		if (!player) {
+		var me = _.filter(board.players, function (player) {return player.userId === Session.get("userId");}).pop();
+		if (!me) {
+			console.error("we are not a player in the current game");
+			return;
+		}
+		Session.set('myTiles', me.tiles);
+		var opponent = _.filter(board.players, function (player) {return player.userId !== Session.get("userId");}).pop();
+		if (!opponent) {
 			console.log("no player for current game that isn't ourselves");
 			return;
 		}
-		console.log("setting opponentTiles: ", player.tiles);
-		Session.set('opponentTiles', player.tiles);
-		console.log("setting opponentUserId: ", player.userId);
-		Session.set('opponentUserId', player.userId);
+		Session.set('opponentTiles', opponent.tiles);
+		Session.set('opponentUserId', opponent.userId);
 	});
 	Template.hello.opponentTiles = function () {
 		return Session.get('opponentTiles');
