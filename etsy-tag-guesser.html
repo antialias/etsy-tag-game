@@ -3,13 +3,14 @@
 </head>
 
 <body>
+  {{> container}}
+</body>
+<template name="container">
   <div class='body-container'>
     {{> hello}}
   </div>
-</body>
-
+</template>
 <template name="hello">
-  <div>tag: <input type="text" id="tag-input"></div>
   <div>you are: {{userId}}</div>
   <div>opponent: {{opponentUserId}}</div>
   <div>
@@ -25,27 +26,33 @@
     {{/if}}
   </div>
   {{#if gameId}}
-  <div>
+  <div id='game-cube' class='{{playMode}}'>
     <div class='tag'>{{tag}}</div>
     <h2>Images for your tag that have been sent to your opponent:</h2>
-    <div class='block-of-images'>
-    {{#each myTiles}}
-      <div class='tile'>
-        <img class='tile-image' src="{{image.url_170x135}}">
-        <div class='description'>{{{listing.title}}}</div>
+    <div class='block-of-images my-side'>
+      {{#each myTiles}}
+        <div class='tile'>
+          <img class='tile-image' src="{{image.url_170x135}}">
+          <div class='description'><a href='{{listing.url}}' target="_blank">{{{listing.title}}}</a></div>
+        </div>
+      {{/each}}
+      <div class='tag-input-holder'>
+        <input placeholder="challenge tag" type="text" id="tag-input">
       </div>
-    {{/each}}
     </div>
-    <h2>Challenge images from your opponent's tag?</h2>
-    <div class='block-of-images'>
-    {{#each opponentTiles}}
-      <div class='tile'>
-        <img class='tile-image' src="{{image.url_170x135}}">
-        <div class='description'>{{{listing.title}}}</div>
-      </div>
-    {{/each}}
+    <h2>Challenge images from your opponent's tag.</h2>
+    <div class='block-of-images opponent-side'>
+      {{#each opponentTiles}}
+        <div class='tile'>
+          <img class='tile-image' src="{{image.url_170x135}}">
+          <div class='description'><a href='{{listing.url}}' target="_blank">{{{listing.title}}}</a></div>
+        </div>
+      {{/each}}
+      <div class='tag-input-holder'>
+          <input placeholder="challenge tag" type="text" id="tag-input" class='your-guess'>
+          <button class='give-up'>give up?</button>
+        </div>
     </div>
-    <input type='text' class='your-guess'><button class='give-up'>give up?</button>
   </div>
   {{/if}}
   {{#unless gameId}}

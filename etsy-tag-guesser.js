@@ -32,6 +32,9 @@ if (Meteor.isClient) {
 			$("html").addClass("touch");
 		}
 	});
+	if (!Session.get('play-mode')) {
+		Session.set('play-mode', 'undefined');
+	}
 	Handlebars.registerHelper("empty", function (data) {
 		// {{#unless seems to consider [] as true, so we do this instead}}
 		return data.fetch().length === 0;
@@ -123,13 +126,20 @@ if (Meteor.isClient) {
 	Template.hello.opponentTiles = function () {
 		return Session.get('opponentTiles');
 	};
-	Template.hello.events({
-		'mousemove' : function (e) {
+	Template.hello.playMode = function () {
+		return Session.get('play-mode');
+	};
+	var lastPlayModeSet;
+	Template.hello.preserve([".block-of-images.opponent-side"]);
+	Template.container.events({
+		'mousemove .body-container' : function (e) {
 			$(".body-container").css({
 				'-webkit-perspective-origin-x': e.pageX,
 				'-webkit-perspective-origin-y': e.pageY
 			});
-		},
+		}
+	})
+	Template.hello.events({
 		'click .block-of-images .tile' : function (e) {
 			$(e.curTarget).toggleClass('hover');
 		},
@@ -195,6 +205,10 @@ if (Meteor.isClient) {
 				}
 				boardDep.changed();
 				Session.set("gameId", gameId);
+				Meteor.clearTimeout(lastPlayModeSet);
+				lastPlayModeSet = Meteor.setTimeout(function () {
+					Session.set('play-mode', 'guessing');
+				},1500);
 			});
 		}
 	});
